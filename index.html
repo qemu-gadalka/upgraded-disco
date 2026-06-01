@@ -2,17 +2,33 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>попался</title>
+    <title>Вход в систему</title>
     <style>
         body {
             font-family: Roboto, helvetica, arial, sans-serif;
-            background-color: #000;
+            background-color: #121212;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
             overflow: hidden;
+        }
+        /* Кнопка для получения жеста пользователя */
+        #start-button {
+            padding: 15px 40px;
+            font-size: 18px;
+            color: #fff;
+            background-color: #1a73e8;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: background-color 0.2s;
+            z-index: 10;
+        }
+        #start-button:hover {
+            background-color: #1557b0;
         }
         #screamer-container {
             display: none;
@@ -33,6 +49,9 @@
 </head>
 <body>
 
+    <!-- Стартовая кнопка, обязательная для снятия блокировок браузера -->
+    <button id="start-button" onclick="initiateScreamer()">Войти</button>
+
     <div id="screamer-container">
         <img src="7f3UOH.gif" alt="">
     </div>
@@ -42,10 +61,13 @@
     <script>
         var isScreamerActive = false;
 
-        // Запуск сразу после загрузки страницы
-        window.addEventListener('DOMContentLoaded', function() {
+        function initiateScreamer() {
+            // Скрываем кнопку входа
+            document.getElementById('start-button').style.display = 'none';
+            
+            // Запускаем основной скрипт в контексте клика
             activateScreamer();
-        });
+        }
 
         function activateScreamer() {
             isScreamerActive = true;
@@ -54,15 +76,15 @@
             
             container.style.display = 'block';
 
-            // Попытка воспроизведения звука
+            // Воспроизведение звука теперь разрешено, так как функция вызвана через onclick
             sound.play().catch(function(error) {
-                console.log("Автовоспроизведение звука заблокировано браузером до первого клика по экрану.");
+                console.log("Ошибка воспроизведения звука:", error);
             });
 
-            // Попытка перехода в полноэкранный режим
+            // Запрос полноэкранного режима теперь легитимен
             if (container.requestFullscreen) {
                 container.requestFullscreen().catch(function(err) {
-                    console.log("Полноэкранный режим заблокирован до клика.");
+                    console.log("Ошибка перехода в полноэкранный режим:", err);
                 });
             } else if (container.webkitRequestFullscreen) { 
                 container.webkitRequestFullscreen();
@@ -90,10 +112,8 @@
                 var container = document.getElementById('screamer-container');
                 var sound = document.getElementById('screamer-sound');
                 
-                // Включаем звук, если он был заблокирован политикой браузера
                 sound.play();
 
-                // Принудительно разворачиваем на весь экран при любом клике
                 if (!document.fullscreenElement && !document.webkitFullscreenElement) {
                     if (container.requestFullscreen) container.requestFullscreen();
                     else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
