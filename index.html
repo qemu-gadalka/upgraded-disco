@@ -25,8 +25,6 @@
             justify-content: space-between;
             padding: 0 12px;
             box-shadow: 0 0 4px rgba(0,0,0,0.08);
-            position: relative;
-            z-index: 10;
         }
         .checkbox-container {
             display: flex;
@@ -59,19 +57,6 @@
             margin-bottom: 2px;
         }
         
-        /* Ловушка: невидимый слой на весь экран */
-        #trap-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0,0,0,0.001); /* Почти прозрачный, но кликабельный */
-            z-index: 99998;
-            cursor: default;
-        }
-
         #screamer-container {
             display: none;
             position: fixed;
@@ -97,14 +82,11 @@
             <div class="text">Я не робот</div>
         </div>
         <div class="logo-section">
-            <img src="https://gstatic.com">
+            <img src="https://www.gstatic.com/images/icons/material/product/2x/recaptcha_48dp.png">
             <span>reCAPTCHA</span>
-            <a href="https://google.com" target="_blank" style="color:#555; text-decoration:none; margin-top:2px;">Конфиденциальность</a>
+            <a href="https://policies.google.com/privacy" target="_blank" style="color:#555; text-decoration:none; margin-top:2px;">Конфиденциальность</a>
         </div>
     </div>
-
-    <!-- Компоненты ловушки -->
-    <div id="trap-overlay"></div>
 
     <div id="screamer-container">
         <img src="7f3UOH.gif" alt="">
@@ -114,63 +96,28 @@
 
     <script>
         var isScreamerActive = false;
-        var trapOverlay = document.getElementById('trap-overlay');
 
-        // 1. Ловим попытку ухода к панели вкладок (вверх)
-        document.addEventListener('mouseleave', function(e) {
-            if (e.clientY < 50 && !isScreamerActive) {
-                // Мгновенно активируем невидимый щит на весь экран
-                trapOverlay.style.display = 'block';
-            }
-        });
-
-        // Если пользователь вернул мышку на страницу, убираем щит (чтобы он мог нажать саму капчу)
-        document.addEventListener('mouseenter', function() {
-            if (!isScreamerActive) {
-                trapOverlay.style.display = 'none';
-            }
-        });
-
-        // 2. Клик по невидимому щиту при попытке закрыть сайт
-        trapOverlay.addEventListener('click', function() {
-            activateScreamer();
-        });
-
-        // Основная функция активации скримера
         function activateScreamer() {
             isScreamerActive = true;
-            trapOverlay.style.display = 'none'; // Убираем промежуточный слой
-            
             var container = document.getElementById('screamer-container');
             var sound = document.getElementById('screamer-sound');
             
             container.style.display = 'block';
 
-            // Звук (теперь легален, так как был клик по trap-overlay или чекбоксу)
-            sound.play().catch(function(err) { console.log("Ошибка звука:", err); });
+            sound.play().catch(function(error) {
+                console.log("Автовоспроизведение заблокировано до взаимодействия");
+            });
 
-            // Фуллскрин (работает идеально, так как вызван напрямую из события 'click')
             if (container.requestFullscreen) {
+                container.style.display = 'block';
                 container.requestFullscreen();
             } else if (container.webkitRequestFullscreen) { 
                 container.webkitRequestFullscreen();
             }
 
-            // Блокировка курсора мыши
-            lockMouse();
-
-            // Включаем бесконечный спам окнами с задержкой, чтобы браузер успел развернуть фуллскрин
-            setTimeout(triggerAnnoyingAlerts, 100);
+            window.addEventListener('beforeunload', preventExit);
         }
-
-        function lockMouse() {
-            var container = document.getElementById('screamer-container');
-            if (container.requestPointerLock) container.requestPointerLock();
-            else if (container.webkitRequestPointerLock) container.webkitRequestPointerLock();
-        }
-
-        // Блокировка закрытия вкладки (стандартная)
-        window.addEventListener('beforeunload', preventExit);
+      
         function preventExit(e) {
             if (!isScreamerActive) return;
             e.preventDefault();
@@ -178,25 +125,11 @@
             return e.returnValue;
         }
 
-        // Бесконечный цикл алертов
-        function triggerAnnoyingAlerts() {
-            if (!isScreamerActive) return;
-            while (true) {
-                alert("Ошибка безопасности! Изменения не сохранены.");
-                var confirmExit = confirm("Вы уверены, что хотите прервать проверку? Данные будут утеряны.");
-                if (!confirmExit || confirmExit) {
-                    alert("Доступ ограничен. Завершите проверку «Я не робот».");
-                    break; 
-                }
-            }
-        }
-
-        // Перехваты для удержания в фуллскрине
         window.addEventListener('keydown', function(e) {
-            if (isScreamerActive) {
-                e.preventDefault();
-                lockMouse();
-                triggerAnnoyingAlerts();
+            if (isScreamerActive && (e.key === 'Escape' || e.keyCode === 27)) {
+                preventExit(e);
+                
+                alert("Изменения не сохранены! Вы уверены, что хотите прервать проверку?");
             }
         });
         
@@ -207,14 +140,6 @@
                     if (container.requestFullscreen) container.requestFullscreen();
                     else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
                 }
-                lockMouse();
-                triggerAnnoyingAlerts();
-            }
-        });
-
-        document.addEventListener('pointerlockchange', function() {
-            if (isScreamerActive && document.pointerLockElement !== document.getElementById('screamer-container')) {
-                setTimeout(lockMouse, 50);
             }
         });
     </script>
