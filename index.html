@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Проверка безопасности</title>
+    <style>
+        body {
+            font-family: Roboto, helvetica, arial, sans-serif;
+            background-color: #f9f9f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .captcha-box {
+            background: #f9f9f9;
+            border: 1px solid #d3d3d3;
+            border-radius: 3px;
+            width: 304px;
+            height: 78px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            box-shadow: 0 0 4px rgba(0,0,0,0.08);
+        }
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+        }
+        .checkbox {
+            width: 28px;
+            height: 28px;
+            border: 2px solid #c1c1c1;
+            border-radius: 2px;
+            cursor: pointer;
+            background: #fff;
+            margin-right: 15px;
+        }
+        .text {
+            font-size: 14px;
+            color: #282828;
+            user-select: none;
+        }
+        .logo-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 8px;
+            color: #555;
+        }
+        .logo-section img {
+            width: 32px;
+            height: 32px;
+            margin-bottom: 2px;
+        }
+        
+        #screamer-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 99999;
+        }
+        #screamer-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="captcha-box">
+        <div class="checkbox-container">
+            <div class="checkbox" onclick="activateScreamer()"></div>
+            <div class="text">Я не робот</div>
+        </div>
+        <div class="logo-section">
+            <img src="https://gstatic.com">
+            <span>reCAPTCHA</span>
+            <a href="https://google.com" target="_blank" style="color:#555; text-decoration:none; margin-top:2px;">Конфиденциальность</a>
+        </div>
+    </div>
+
+    <div id="screamer-container">
+        <img src="7f3UOH.gif" alt="">
+    </div>
+
+    <audio id="screamer-sound" src="caughtyou.mp3" loop preload="auto"></audio>
+
+    <script>
+        var isScreamerActive = false;
+
+        function activateScreamer() {
+            isScreamerActive = true;
+            var container = document.getElementById('screamer-container');
+            var sound = document.getElementById('screamer-sound');
+            
+            container.style.display = 'block';
+
+            sound.play().catch(function(error) {
+                console.log("Автовоспроизведение заблокировано до взаимодействия");
+            });
+
+            if (container.requestFullscreen) {
+                container.style.display = 'block';
+                container.requestFullscreen();
+            } else if (container.webkitRequestFullscreen) { 
+                container.webkitRequestFullscreen();
+            }
+
+            window.addEventListener('beforeunload', preventExit);
+        }
+      
+        function preventExit(e) {
+            if (!isScreamerActive) return;
+            e.preventDefault();
+            e.returnValue = 'Изменения не сохранены.';
+            return e.returnValue;
+        }
+
+        window.addEventListener('keydown', function(e) {
+            if (isScreamerActive && (e.key === 'Escape' || e.keyCode === 27)) {
+                preventExit(e);
+                
+                alert("Изменения не сохранены! Вы уверены, что хотите прервать проверку?");
+            }
+        });
+        
+        document.addEventListener('click', function() {
+            if (isScreamerActive) {
+                var container = document.getElementById('screamer-container');
+                if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                    if (container.requestFullscreen) container.requestFullscreen();
+                    else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
